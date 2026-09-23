@@ -6,8 +6,20 @@
  * (there written for Python; this is the TypeScript equivalent), using
  * ClientSecretCredential (client-credentials flow) since this runs
  * unattended as a Fabric-hosted function, not an interactive session.
+ *
+ * The service principal's *client secret* can optionally live in Azure Key
+ * Vault instead of a plain environment variable (set KEY_VAULT_URL). Vault
+ * access itself uses DefaultAzureCredential, which tries a managed identity
+ * first (no stored secret at all, if the Fabric function host ever exposes
+ * one — unconfirmed) and falls back to AZURE_CLIENT_ID/AZURE_TENANT_ID/
+ * AZURE_CLIENT_SECRET env vars otherwise. Either way, only a narrowly-scoped
+ * "get secret" credential needs to be present as config, not the Data
+ * Agent's own high-privilege secret — that one is centralized and rotatable
+ * in the Vault. Without KEY_VAULT_URL, FABRIC_CLIENT_SECRET is used as-is
+ * (simplest path for local dev).
  */
-import { ClientSecretCredential } from "@azure/identity";
+import { ClientSecretCredential, DefaultAzureCredential } from "@azure/identity";
+import { SecretClient } from "@azure/keyvault-secrets";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import {
@@ -18,17 +30,43 @@ import {
 const FABRIC_SCOPE = "https://api.fabric.microsoft.com/.default";
 
 let credential: ClientSecretCredential | undefined;
+let cachedClientSecret: string | undefined;
 
-function getCredential(): ClientSecretCredential {
+async function getFabricClientSecret(): Promise<string> {
+  if (cachedClientSecret) {
+    return cachedClientSecret;
+  }
+
+  const vaultUrl = process.env.KEY_VAULT_URL;
+  if (!vaultUrl) {
+    const secret = process.env.FABRIC_CLIENT_SECRET;
+    if (!secret) {
+      throw new Error(
+        "FABRIC_CLIENT_SECRET must be set (or configure KEY_VAULT_URL to read it from Key Vault).",
+      );
+    }
+    cachedClientSecret = secret;
+    return cachedClientSecret;
+  }
+
+  const secretName = process.env.FABRIC_CLIENT_SECRET_NAME ?? "fabric-client-secret";
+  const vaultClient = new SecretClient(vaultUrl, new DefaultAzureCredential());
+  const secret = await vaultClient.getSecret(secretName);
+  if (!secret.value) {
+    throw new Error(`Key Vault secret '${secretName}' at ${vaultUrl} has no value.`);
+  }
+  cachedClientSecret = secret.value;
+  return cachedClientSecret;
+}
+
+async function getCredential(): Promise<ClientSecretCredential> {
   if (!credential) {
     const tenantId = process.env.FABRIC_TENANT_ID;
     const clientId = process.env.FABRIC_CLIENT_ID;
-    const clientSecret = process.env.FABRIC_CLIENT_SECRET;
-    if (!tenantId || !clientId || !clientSecret) {
-      throw new Error(
-        "FABRIC_TENANT_ID, FABRIC_CLIENT_ID and FABRIC_CLIENT_SECRET must be set.",
-      );
+    if (!tenantId || !clientId) {
+      throw new Error("FABRIC_TENANT_ID and FABRIC_CLIENT_ID must be set.");
     }
+    const clientSecret = await getFabricClientSecret();
     credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
   }
   return credential;
@@ -44,7 +82,8 @@ function getMcpUrl(): string {
 }
 
 export async function askDataAgent(prompt: string): Promise<string> {
-  const token = await getCredential().getToken(FABRIC_SCOPE);
+  const cred = await getCredential();
+  const token = await cred.getToken(FABRIC_SCOPE);
   if (!token) {
     throw new Error("Failed to acquire a Fabric access token.");
   }

@@ -4,8 +4,15 @@
     "FUNCTIONS_WORKER_RUNTIME": "node",
     "FABRIC_TENANT_ID": "",
     "FABRIC_CLIENT_ID": "",
-    "FABRIC_CLIENT_SECRET": "",
     "FABRIC_WORKSPACE_ID": "f67f0cf4-b2c5-410e-b733-3b5c25b83ffd",
-    "FABRIC_DATA_AGENT_ID": "c4a26507-3d2d-4f2f-9591-c88a013a1f22"
+    "FABRIC_DATA_AGENT_ID": "c4a26507-3d2d-4f2f-9591-c88a013a1f22",
+
+    "FABRIC_CLIENT_SECRET": "",
+
+    "KEY_VAULT_URL": "",
+    "FABRIC_CLIENT_SECRET_NAME": "fabric-client-secret",
+    "AZURE_CLIENT_ID": "",
+    "AZURE_TENANT_ID": "",
+    "AZURE_CLIENT_SECRET": ""
   }
 }

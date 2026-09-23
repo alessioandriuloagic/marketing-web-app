@@ -10,6 +10,7 @@
   "dependencies": {
     "@azure/functions": "^4.16.5",
     "@azure/identity": "^4.13.3",
+    "@azure/keyvault-secrets": "^4.11.2",
     "@microsoft/rayfin-functions": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.30.1"
   },

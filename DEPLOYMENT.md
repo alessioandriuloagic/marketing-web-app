@@ -75,13 +75,31 @@ verificare/ricopiare workspace ID, Data Agent ID e URL MCP (già inseriti sopra)
 4. Per lo sviluppo locale, copiare `app/rayfin/functions/local.settings.json.example`
    in `local.settings.json` e compilare `FABRIC_TENANT_ID`, `FABRIC_CLIENT_ID`,
    `FABRIC_CLIENT_SECRET`.
-5. **Da verificare al deploy** (non documentato pubblicamente al momento in
+5. **Opzionale ma consigliato — tenere il client secret in Azure Key Vault
+   invece che in chiaro**: impostare `KEY_VAULT_URL` (es.
+   `https://<il-tuo-vault>.vault.azure.net/`) e salvare il client secret del
+   service principal come segreto nel Vault con nome
+   `fabric-client-secret` (o un altro nome, in tal caso impostare anche
+   `FABRIC_CLIENT_SECRET_NAME`). A quel punto **non** impostare
+   `FABRIC_CLIENT_SECRET` — la funzione lo recupera da Key Vault a runtime.
+   Per aprire il Vault la funzione usa `DefaultAzureCredential`, che prova
+   prima una Managed Identity (nessun segreto memorizzato da nessuna parte,
+   se Fabric ne assegna una alle Rayfin Functions — non verificato) e poi
+   ripiega su `AZURE_CLIENT_ID`/`AZURE_TENANT_ID`/`AZURE_CLIENT_SECRET` se
+   impostate. In quel caso, usare un service principal **con permesso minimo
+   "get secret" sul Vault**, separato da quello con accesso al Data Agent —
+   così il segreto ad alto privilegio resta centralizzato e ruotabile nel
+   Vault, e quello effettivamente presente come app setting ha un raggio
+   d'azione ridotto.
+6. **Da verificare al deploy** (non documentato pubblicamente al momento in
    cui è stato scritto questo repo): il modo in cui questi valori vanno
    impostati come segreti sulla funzione *pubblicata* — probabilmente come
-   application settings sulla risorsa che Fabric crea per la funzione. Controllare
-   l'output di `rayfin up --help` / `npx rayfin up db apply --help` per
-   opzioni relative a variabili d'ambiente delle funzioni, oppure cercare la
-   funzione come child item nel portale Fabric dopo il deploy.
+   application settings sulla risorsa che Fabric crea per la funzione, e se
+   Fabric assegna una Managed Identity alle Rayfin Functions (che
+   renderebbe superfluo il punto 5's fallback SP). Controllare l'output di
+   `rayfin up --help` / `npx rayfin up db apply --help` per opzioni relative
+   a variabili d'ambiente delle funzioni, oppure cercare la funzione come
+   child item nel portale Fabric dopo il deploy.
 
 ### 5. Pubblicare la Fabric App con Rayfin
 
