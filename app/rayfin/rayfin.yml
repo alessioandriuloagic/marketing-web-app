@@ -5,6 +5,13 @@ version: 0.1.0
 services:
   data:
     enabled: true
+    dialect: mssql
+
+  storage:
+    enabled: false
+
+  functions:
+    enabled: true
 
   auth:
     enabled: true

@@ -104,8 +104,18 @@ prima `npx rayfin up --dry-run --verbose` per vedere cosa farà.
 change substantially in the near future`). Un caso reale riportato nel forum
 Microsoft Q&A, con versioni di `rayfin-cli` molto vicine a quella usata qui
 (1.34.0/1.35.0), ha fallito il deploy con l'errore `Functions not supported`
-proveniente dal backend Fabric stesso, non dal CLI. Non è verificabile da
-questa sessione se oggi funzioni.
+proveniente dal backend Fabric stesso, non dal CLI.
+
+Nota: confrontando con un `rayfin.yml` reale e già deployato con successo
+(progetto `rayfin-seismic-dashboard` dello stesso autore di questo repo), è
+emerso che `rayfin.yml` richiede un blocco esplicito
+`services.functions.enabled: true` — assente nelle versioni di `rayfin.yml`
+generate da questa sessione fino a prima di questa correzione. È plausibile
+che il caso "Functions not supported" nel forum fosse dovuto proprio a questo
+flag mancante/`false`, non a un limite della piattaforma — ma non è
+confermabile con certezza senza un deploy reale. Il `rayfin.yml` di questo
+repo ora include `services.functions.enabled: true`; se il deploy fallisce
+comunque, è un limite reale della piattaforma e non di configurazione.
 
 Se capita: il commit `225b8fd` di questo repo (`git show 225b8fd` o
 `git log --all`) contiene un'implementazione equivalente e già testata come
