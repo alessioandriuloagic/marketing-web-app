@@ -1,0 +1,23 @@
+id: marketing-agente
+name: Marketing Agente
+version: 0.1.0
+
+services:
+  data:
+    enabled: true
+
+  auth:
+    enabled: true
+    allowedRedirectUris:
+      - http://localhost:5173
+    fabric:
+      enabled: true
+    password:
+      enabled: true # local development only; ignored on Fabric deployment
+
+  staticHosting:
+    enabled: true
+    root: ..
+    folder: dist
+    buildCommand: npm run build
+    indexDocument: index.html

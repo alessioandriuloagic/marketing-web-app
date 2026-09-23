@@ -1,0 +1,19 @@
+# Node / Rayfin app
+app/node_modules/
+app/dist/
+app/dist-rayfin/
+app/*.tsbuildinfo
+app/rayfin/*.tsbuildinfo
+app/rayfin/.env
+app/.env
+app/.env.fabric-*
+
+# Python / mcp-proxy
+mcp-proxy/.venv/
+mcp-proxy/__pycache__/
+mcp-proxy/**/__pycache__/
+mcp-proxy/.pytest_cache/
+mcp-proxy/.env
+
+# Editors / OS
+.DS_Store
