@@ -7,41 +7,46 @@ AGENT`, consumato via **MCP**.
 
 ## Architettura
 
-Il progetto è composto da due parti distribuite separatamente:
+Tutto vive in un'unica Fabric App (`app/`), costruita con **Rayfin**
+(TypeScript + React):
 
-- **`app/`** — la Fabric App vera e propria, costruita con **Rayfin**
-  (TypeScript + React). Contiene l'interfaccia chat e la persistenza delle
-  conversazioni (Rayfin data layer), con login tramite Fabric SSO. Viene
-  pubblicata nel workspace Fabric con `rayfin up`.
-- **`mcp-proxy/`** — un piccolo backend Python/FastAPI, distribuito
-  separatamente (es. Azure Container Apps), che tiene le credenziali di un
-  service principal e parla MCP con il Data Agent per conto dell'app.
+- **Frontend** (`app/src/`) — UI chat, login Fabric SSO, persistenza delle
+  conversazioni sul data layer generato da Rayfin.
+- **Modelli dati** (`app/rayfin/data/`) — entità `Conversation`/`Message`
+  con permessi per-utente.
+- **Rayfin Function** (`app/rayfin/functions/`) — un progetto Azure Functions
+  (Node/TypeScript) separato che gira *dentro* Fabric come parte della stessa
+  Fabric App. Tiene le credenziali di un service principal e parla MCP con il
+  Data Agent (`Server MCP Fabric da_IP`, workspace `AGIC IP MARKETING -
+  AGENT`). Il frontend la invoca con `client.functions.askDataAgent.invoke()`
+  — autenticato automaticamente dalla sessione Rayfin dell'utente, senza
+  gestione manuale di token.
 
-Una Fabric App pubblicata è solo hosting statico + servizi gestiti (DB, auth):
-non esiste ancora un compute server-side supportato dentro l'app stessa, quindi
-non può custodire un segreto per chiamare direttamente l'endpoint MCP del Data
-Agent (che richiede un bearer token Fabric a ogni chiamata). Da qui la scelta
-di un piccolo backend esterno e fidato che tiene quel segreto.
-
-Il frontend autentica ogni chiamata al proxy con il JWT di sessione emesso da
-Rayfin (`client.auth`), verificato lato proxy tramite l'endpoint JWKS di
-Rayfin — vera autenticazione per-utente, non una chiave condivisa. Questo però
-**non** dà isolamento dei permessi Fabric per singolo utente sulla chiamata al
-Data Agent: quella gira sempre con il service principal. Il modello di
-autenticazione completo, con le alternative valutate e perché sono state
-scartate, è documentato in [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+**Nota importante**: `@microsoft/rayfin-functions` è etichettato
+"Experimental" da Microsoft e potrebbe non essere ancora abilitato lato
+backend Fabric per tutti i tenant/versioni CLI (un caso reale con versioni
+CLI molto vicine a quella usata qui ha riportato un rifiuto in deploy). Se
+`rayfin up` fallisce sul deploy della function, vedi la sezione "Se il deploy
+della function fallisce" in [`DEPLOYMENT.md`](./DEPLOYMENT.md) per il piano
+di ripiego (un proxy esterno equivalente, già scritto e testato, recuperabile
+dalla cronologia git).
 
 ## Struttura del repository
 
 ```
-app/          Fabric App (Rayfin + React) — chat UI, data model, auth
-mcp-proxy/    Backend Python/FastAPI — proxy verso l'MCP del Data Agent
-DEPLOYMENT.md Guida passo-passo alla pubblicazione
+app/
+├── rayfin/
+│   ├── data/           Entità Conversation/Message (Rayfin data layer)
+│   ├── functions/       Azure Function askDataAgent (chiamata MCP al Data Agent)
+│   └── rayfin.yml        Configurazione servizi (data, auth, staticHosting)
+├── src/                 Frontend React (chat UI)
+└── package.json
+DEPLOYMENT.md            Guida passo-passo alla pubblicazione
 ```
 
 ## Sviluppo locale
 
-### `app/`
+### Frontend + data layer
 
 ```bash
 cd app
@@ -49,23 +54,14 @@ npm install
 npm run dev
 ```
 
-Richiede le variabili d'ambiente in `app/.env` (vedi `app/rayfin/.env.example`
-e i riferimenti a `VITE_*` in `src/lib`).
-
-### `mcp-proxy/`
+### Rayfin Function
 
 ```bash
-cd mcp-proxy
-python3 -m venv .venv
-.venv/bin/pip install -r requirements-dev.txt
-cp .env.example .env  # e compila le credenziali del service principal
-.venv/bin/uvicorn app.main:app --reload
-```
-
-Test:
-
-```bash
-.venv/bin/python -m pytest tests -v
+cd app/rayfin/functions
+npm install
+cp local.settings.json.example local.settings.json  # e compila le credenziali
+npm i -g azure-functions-core-tools@4  # una tantum, per `func start`
+npm run start
 ```
 
 ## Pubblicazione

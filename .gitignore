@@ -8,12 +8,10 @@ app/rayfin/.env
 app/.env
 app/.env.fabric-*
 
-# Python / mcp-proxy
-mcp-proxy/.venv/
-mcp-proxy/__pycache__/
-mcp-proxy/**/__pycache__/
-mcp-proxy/.pytest_cache/
-mcp-proxy/.env
+# Rayfin functions (Azure Functions project)
+app/rayfin/functions/node_modules/
+app/rayfin/functions/dist/
+app/rayfin/functions/local.settings.json
 
 # Editors / OS
 .DS_Store

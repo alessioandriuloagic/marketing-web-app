@@ -93,7 +93,6 @@ export default function App() {
         setMessages((prev) => [...prev, userMessage]);
 
         const answer = await askMarketingAgente({
-          conversationId,
           question: text,
           history,
         });
