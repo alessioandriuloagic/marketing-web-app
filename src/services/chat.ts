@@ -3,9 +3,12 @@ import { askDataAgentOverMcp, composePrompt } from './dataAgentMcp';
 import { getFabricToken, isFabricAuthConfigured } from './fabricAuth';
 
 /**
- * Coordinates of the published Fabric data agent (`da_IP` in the
- * "AGIC IP MARKETING - AGENT" workspace). Overridable at build time so the app can be
- * pointed at a different agent without a code change.
+ * Coordinates of the published Fabric data agent (`DA_Marketing_For_App` in
+ * `fabric-ip-agic-prod-engine-crm`). Overridable at build time so the app can be pointed at
+ * a different agent without a code change.
+ *
+ * The agent may sit on a capacity in a different region than the app: the MCP endpoint is a
+ * global Fabric API, and only *hosting* a Fabric App item is region-gated.
  *
  * The variable names avoid the `VITE_FABRIC_*` prefix on purpose: `rayfin up` regenerates
  * `.env.local` with `VITE_FABRIC_WORKSPACE_ID` set to the *app's own* workspace, and
@@ -15,10 +18,10 @@ import { getFabricToken, isFabricAuthConfigured } from './fabricAuth';
 const DATA_AGENT = {
   workspaceId:
     import.meta.env.VITE_DATA_AGENT_WORKSPACE_ID ??
-    'f67f0cf4-b2c5-410e-b733-3b5c25b83ffd',
+    'c3c64719-18fb-4598-891c-3cdc94f79d2d',
   dataAgentId:
     import.meta.env.VITE_DATA_AGENT_ID ??
-    'c4a26507-3d2d-4f2f-9591-c88a013a1f22',
+    'bc867c23-3e1a-4069-9c3f-66f45ee4a2ef',
 };
 
 export interface Conversation {

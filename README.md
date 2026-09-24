@@ -95,8 +95,12 @@ deploys. Vite inlines `VITE_*` variables at build time.
 | --- | --- | --- |
 | `VITE_ENTRA_CLIENT_ID` | **yes** | — |
 | `VITE_ENTRA_TENANT_ID` | no | `organizations` |
-| `VITE_DATA_AGENT_WORKSPACE_ID` | no | `f67f0cf4-b2c5-410e-b733-3b5c25b83ffd` (`AGIC IP MARKETING - AGENT`) |
-| `VITE_DATA_AGENT_ID` | no | `c4a26507-3d2d-4f2f-9591-c88a013a1f22` (`da_IP`) |
+| `VITE_DATA_AGENT_WORKSPACE_ID` | no | `c3c64719-18fb-4598-891c-3cdc94f79d2d` (`fabric-ip-agic-prod-engine-crm`) |
+| `VITE_DATA_AGENT_ID` | no | `bc867c23-3e1a-4069-9c3f-66f45ee4a2ef` (`DA_Marketing_For_App`) |
+
+The agent does not have to live on the same capacity — or even the same region — as the app.
+The MCP endpoint is a global `api.fabric.microsoft.com` API; only *hosting* a Fabric App item
+is region-gated.
 
 > **Do not rename these to `VITE_FABRIC_*`.** `rayfin up` regenerates `.env.local` with its
 > own `VITE_FABRIC_WORKSPACE_ID`, pointing at the app's own workspace, and `.env.local`
