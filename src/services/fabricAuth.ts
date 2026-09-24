@@ -50,6 +50,32 @@ function getApp(): Promise<PublicClientApplication> {
   return appPromise;
 }
 
+/**
+ * Turns Entra's raw failures into something a user can act on.
+ *
+ * A misconfigured registration surfaces in the console as a cryptic "Unsafe attempt to
+ * initiate navigation" — MSAL's hidden iframe receives an Entra error page that tries to
+ * redirect the top window. Without this mapping the real cause stays invisible.
+ */
+function describeAuthError(error: unknown): string {
+  const raw =
+    error instanceof Error ? `${error.message}` : typeof error === 'string' ? error : '';
+
+  if (raw.includes('AADSTS700016') || raw.includes('unauthorized_client')) {
+    return `The Entra application ${clientId} does not exist in tenant ${tenantId}, or it is not enabled for this sign-in. Check VITE_ENTRA_CLIENT_ID.`;
+  }
+  if (raw.includes('AADSTS50011') || raw.includes('redirect_uri')) {
+    return `The redirect URI ${window.location.origin} is not registered on the Entra application ${clientId}. Add it as a Single-page application redirect URI.`;
+  }
+  if (raw.includes('AADSTS65001') || raw.includes('consent_required')) {
+    return 'Consent is required for the Fabric data agent permissions. Accept the prompt, or ask an administrator to grant consent.';
+  }
+  if (raw.includes('popup_window_error') || raw.includes('popup_blocked')) {
+    return 'The sign-in popup was blocked by the browser. Allow popups for this site and retry.';
+  }
+  return raw || 'Entra sign-in failed.';
+}
+
 function pickAccount(
   app: PublicClientApplication,
   loginHint?: string
@@ -81,6 +107,9 @@ export async function getFabricToken(loginHint?: string): Promise<string> {
   const app = await getApp();
   const account = pickAccount(app, loginHint);
 
+  // The silent paths are optimisations: any failure — including a misconfigured
+  // registration — must degrade to the popup, which is the only place that can report a
+  // meaningful error to the user.
   if (account) {
     try {
       const result = await app.acquireTokenSilent({
@@ -90,7 +119,7 @@ export async function getFabricToken(loginHint?: string): Promise<string> {
       return result.accessToken;
     } catch (error) {
       if (!(error instanceof InteractionRequiredAuthError)) {
-        throw error;
+        console.warn('Silent Fabric token acquisition failed:', describeAuthError(error));
       }
     }
   }
@@ -103,7 +132,7 @@ export async function getFabricToken(loginHint?: string): Promise<string> {
       return result.accessToken;
     } catch (error) {
       if (!(error instanceof InteractionRequiredAuthError)) {
-        throw error;
+        console.warn('Fabric SSO handshake failed:', describeAuthError(error));
       }
     }
   }
@@ -112,6 +141,10 @@ export async function getFabricToken(loginHint?: string): Promise<string> {
   if (loginHint) request.loginHint = loginHint;
   if (account) request.account = account;
 
-  const result = await app.acquireTokenPopup(request);
-  return result.accessToken;
+  try {
+    const result = await app.acquireTokenPopup(request);
+    return result.accessToken;
+  } catch (error) {
+    throw new Error(describeAuthError(error));
+  }
 }

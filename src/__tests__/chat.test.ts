@@ -5,6 +5,13 @@ vi.mock('@/services/rayfinClient', () => ({
   getRayfinClient: vi.fn(),
 }));
 
+// `.env` ships a real VITE_ENTRA_CLIENT_ID, and Vitest loads it. Without this mock the
+// local-mode branch would see Entra as configured and try a real sign-in.
+vi.mock('@/services/fabricAuth', () => ({
+  isFabricAuthConfigured: () => false,
+  getFabricToken: vi.fn(),
+}));
+
 import {
   appendMessage,
   askDataAgent,

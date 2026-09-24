@@ -100,14 +100,40 @@ deploys. Vite inlines `VITE_*` variables at build time.
 
 ### Required Entra app registration
 
-`VITE_ENTRA_CLIENT_ID` must point at an Entra **single-page application** registration:
+`VITE_ENTRA_CLIENT_ID` must point at an Entra **single-page application** registration. It
+must be a registration dedicated to this app: reusing an existing service principal (for
+example a backend runtime SPN) does not work, because those have no SPA redirect URI and
+mixing a public client into a confidential one is poor hygiene.
 
 1. Entra admin center → **App registrations** → **New registration**.
 2. Platform **Single-page application**, redirect URI = the deployed app origin
    (e.g. `https://<app>.webapp.fabricapps.net`). Add `http://localhost:5173` for local dev.
-3. **API permissions** → **Power BI Service** → *Delegated* → grant what the agent needs (for a
-   semantic-model-backed agent: `Dataset.Read.All`, `Workspace.Read.All`), then **Grant admin
-   consent** so users are not prompted individually.
+3. **API permissions** → **Power BI Service** → *Delegated* → `DataAgent.Execute.All` and
+   `DataAgent.Read.All`. These are the scopes the data agent MCP endpoint checks.
+
+Both scopes are **user-consentable**, so admin consent is optional: unless the tenant
+restricts user consent, each user accepts once at the first sign-in popup.
+
+Equivalent Microsoft Graph call, for scripted provisioning:
+
+```jsonc
+POST https://graph.microsoft.com/v1.0/applications
+{
+  "displayName": "marketing-data-chat-spa",
+  "signInAudience": "AzureADMyOrg",
+  "spa": { "redirectUris": ["https://<app>.webapp.fabricapps.net"] },
+  "requiredResourceAccess": [{
+    "resourceAppId": "00000009-0000-0000-c000-000000000000",  // Power BI Service
+    "resourceAccess": [
+      { "id": "c6756612-6853-4145-a661-90c1d045b2dc", "type": "Scope" }, // DataAgent.Execute.All
+      { "id": "40fa91d5-73ef-412c-a8c8-c8658670d0eb", "type": "Scope" }  // DataAgent.Read.All
+    ]
+  }]
+}
+```
+
+Creating the registration needs a directory role (Application Developer or higher) when the
+tenant sets `allowedToCreateApps = false`, which is the default in many organisations.
 
 Users must also have access to the data agent's workspace and to the data behind it.
 
