@@ -8,9 +8,9 @@ import { askDataAgentOverMcp, composePrompt } from './dataAgentMcp.js';
 
 const udf = new UserDataFunctions();
 
-/** Fabric coordinates of the published data agent (workspace: fabric-ip-agic-prod-engine-crm). */
-const DEFAULT_WORKSPACE_ID = 'c3c64719-18fb-4598-891c-3cdc94f79d2d';
-const DEFAULT_DATA_AGENT_ID = 'bc867c23-3e1a-4069-9c3f-66f45ee4a2ef';
+/** Fabric coordinates of the published data agent (workspace: AGIC IP MARKETING - AGENT). */
+const DEFAULT_WORKSPACE_ID = 'f67f0cf4-b2c5-410e-b733-3b5c25b83ffd';
+const DEFAULT_DATA_AGENT_ID = 'c4a26507-3d2d-4f2f-9591-c88a013a1f22';
 
 /** Number of prior turns replayed to the stateless MCP tool as conversation context. */
 const CONTEXT_TURNS = 6;

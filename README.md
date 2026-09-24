@@ -64,8 +64,8 @@ The data agent coordinates default to the values baked into `rayfin/functions/sr
 
 | Setting | Value |
 | --- | --- |
-| Workspace | `fabric-ip-agic-prod-engine-crm` (`c3c64719-18fb-4598-891c-3cdc94f79d2d`) |
-| Data agent | `DA_Marketing_For_App` (`bc867c23-3e1a-4069-9c3f-66f45ee4a2ef`) |
+| Workspace | `AGIC IP MARKETING - AGENT` (`f67f0cf4-b2c5-410e-b733-3b5c25b83ffd`) |
+| Data agent | `da_IP` (`c4a26507-3d2d-4f2f-9591-c88a013a1f22`) |
 
 To point the app at a different agent without editing code, set them as deployed secrets:
 
@@ -105,7 +105,7 @@ Then open the app item from the Fabric portal.
 | Deploy workspace | `ws-marketing-data-chat` (`09745c10-8d0c-4b14-aafe-dd453bd1c982`), **Italy North** |
 | App URL | https://early-wave-d05589855e-italynorth.webapp.fabricapps.net |
 | AppBackend item | `363190a7-53f1-40fa-9946-3e8cd1acefe5` |
-| Data agent workspace | `fabric-ip-agic-prod-engine-crm` (`c3c64719-…`), North Europe |
+| Data agent workspace | `AGIC IP MARKETING - AGENT` (`f67f0cf4-…`), North Europe |
 
 The app and the data agent intentionally live in different workspaces/regions — the MCP call is a
 plain cross-workspace REST call, so only the *deploy* workspace is region-constrained.
