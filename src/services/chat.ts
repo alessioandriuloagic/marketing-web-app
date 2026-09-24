@@ -1,4 +1,20 @@
 import { getRayfinClient, isLocalBackend } from './rayfinClient';
+import { askDataAgentOverMcp, composePrompt } from './dataAgentMcp';
+import { getFabricToken, isFabricAuthConfigured } from './fabricAuth';
+
+/**
+ * Coordinates of the published Fabric data agent (`da_IP` in the
+ * "AGIC IP MARKETING - AGENT" workspace). Overridable at build time so the app can be
+ * pointed at a different agent without a code change.
+ */
+const DATA_AGENT = {
+  workspaceId:
+    import.meta.env.VITE_FABRIC_WORKSPACE_ID ??
+    'f67f0cf4-b2c5-410e-b733-3b5c25b83ffd',
+  dataAgentId:
+    import.meta.env.VITE_FABRIC_DATA_AGENT_ID ??
+    'c4a26507-3d2d-4f2f-9591-c88a013a1f22',
+};
 
 export interface Conversation {
   id: string;
@@ -51,6 +67,18 @@ function requireUserId(): string {
     throw new Error('You are signed out. Sign in again to continue.');
   }
   return session.user.id;
+}
+
+/**
+ * The signed-in user's UPN, passed to MSAL so the Fabric token can usually be minted
+ * silently against the existing browser session instead of prompting.
+ */
+function currentUserHint(): string | undefined {
+  try {
+    return getRayfinClient().auth.getSession().user?.email;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function listConversations(): Promise<Conversation[]> {
@@ -203,33 +231,38 @@ export async function appendMessage(input: {
 }
 
 /**
- * Sends a question to the Fabric data agent through the `askDataAgent` Rayfin
- * function, which proxies it to the agent's MCP server using an on-behalf-of
- * Fabric token for the signed-in user.
+ * Sends a question to the Fabric data agent's MCP server.
+ *
+ * The call is made **directly from the browser**: the agent's MCP endpoint is stateless,
+ * returns permissive CORS headers for this app's origin, and accepts a delegated Entra
+ * token. That keeps every query attributed to the signed-in user — each person sees only
+ * the data they are entitled to — and avoids Rayfin Functions, which are not available on
+ * this tenant/capacity (invoking one returns `WorkloadException/FeatureNotSupported`).
  */
 export async function askDataAgent(
   question: string,
   history: ChatMessage[]
 ): Promise<{ answer: string; toolName: string }> {
-  if (isLocalBackend()) {
+  if (isLocalBackend() && !isFabricAuthConfigured()) {
     await new Promise((resolve) => setTimeout(resolve, 600));
     return {
       answer:
-        `**Local development mode.** The Fabric data agent is only reachable from the ` +
-        `deployed backend, so this is a stub reply to:\n\n> ${question}\n\n` +
-        'Run `npx rayfin up` and open the app from Fabric to query your real data.',
+        `**Local development mode.** Entra sign-in is not configured, so this is a stub ` +
+        `reply to:\n\n> ${question}\n\n` +
+        'Set `VITE_ENTRA_CLIENT_ID` in `.env.local` to query your real data.',
       toolName: 'local-stub',
     };
   }
 
-  const historyJson = JSON.stringify(
-    history
-      .slice(-CONTEXT_TURNS)
-      .map(({ role, content }) => ({ role, content }))
-  );
+  const priorTurns = history
+    .slice(-CONTEXT_TURNS)
+    .map(({ role, content }) => ({ role, content }));
 
-  return getRayfinClient().functions.askDataAgent.invoke({
-    question,
-    historyJson,
-  });
+  const token = await getFabricToken(currentUserHint());
+  return askDataAgentOverMcp(
+    DATA_AGENT,
+    token,
+    composePrompt(question, priorTurns)
+  );
 }
+

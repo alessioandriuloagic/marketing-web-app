@@ -15,8 +15,12 @@ services:
   data:
     enabled: true
     dialect: mssql
+  # Disabled: the Functions workload is not supported on this tenant/capacity — invoking a
+  # deployed function returns WorkloadException/FeatureNotSupported. The data agent is now
+  # queried directly from the browser (src/services/dataAgentMcp.ts). The function source
+  # is kept under rayfin/functions/ in case the workload is enabled later.
   functions:
-    enabled: true
+    enabled: false
     buildCommand: npm run build
   staticHosting:
     enabled: true

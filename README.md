@@ -9,70 +9,107 @@ Built with [Rayfin](https://learn.microsoft.com/en-us/fabric/apps/) (`npm create
 ## Architecture
 
 ```
-Browser (React + Vite, Fabric SSO)
-  │  client.functions.askDataAgent.invoke({ question, historyJson })
-  ▼
-Rayfin Function  (rayfin/functions — server-side, runs in Fabric)
-  │  MCP over Streamable HTTP, Authorization: Bearer <OBO Fabric token>
+Browser (React + Vite)
+  │  Fabric SSO  ──────────────► Rayfin auth + data service (chat history, MSSQL)
+  │
+  │  MSAL (delegated Entra token for https://api.fabric.microsoft.com)
+  │  JSON-RPC over fetch: tools/list -> tools/call
   ▼
 Fabric Data Agent MCP server
   https://api.fabric.microsoft.com/v1/mcp/workspaces/{workspaceId}/dataagents/{agentId}/agent
 ```
 
-Chat history is stored separately through the Rayfin **data service** (`rayfin/data`), which is
-backed by Fabric-managed MSSQL.
+Chat history is stored through the Rayfin **data service** (`rayfin/data`), backed by
+Fabric-managed MSSQL with row-level security. The data agent is queried **directly from the
+browser**.
 
-### Why the MCP call runs server-side
+### Why the MCP call runs in the browser
 
-`api.fabric.microsoft.com` is not designed to be called from browser JavaScript, and a Fabric
-bearer token must never reach the client bundle. The `askDataAgent` Rayfin function is the trust
-boundary: it declares `udf.connection({ audienceType: AudienceType.Fabric })`, and the Fabric host
-hands it an **on-behalf-of token for the signed-in user**. The data agent therefore only ever sees
-data that particular user is allowed to see — there is no shared service principal.
+The original design put the MCP call in a server-side Rayfin function. That turned out to be
+unusable: **the Functions workload is not supported on this tenant/capacity.** Invoking a deployed
+function returns `HTTP 400` with:
+
+```json
+{ "errorCode": "WorkloadException", "subErrorCode": "FeatureNotSupported" }
+```
+
+This is a platform gate, not a bug in the function — a deployed Rayfin function can never return a
+non-200 itself (`ensureFormattedReturnType` hardcodes `status: 200` outside local dev and reports
+the real outcome in the body), so any non-200 on `/functions/*/invoke` comes from the Fabric
+gateway. The same gate produced the *"This application is intended for use only by the app
+builder"* message other users saw.
+
+Calling the endpoint from the browser is viable because it turns out to be unusually
+browser-friendly — all verified against the live endpoint:
+
+| Property | Observed |
+| --- | --- |
+| CORS | `access-control-allow-origin` echoes the app origin; allows `authorization`, `content-type`, `mcp-session-id`, `mcp-protocol-version` |
+| Session | **Stateless** — no `mcp-session-id` is ever issued |
+| Handshake | `tools/list` and `tools/call` work with **no prior `initialize`** |
+| Transport | Plain `application/json`, not an SSE stream |
+
+Because it is stateless and non-streaming, `src/services/dataAgentMcp.ts` speaks JSON-RPC with
+`fetch` directly and deliberately **does not** depend on the MCP SDK.
+
+Security-wise this is equivalent to the original design, and better than the service-principal
+alternative: the token is a **delegated token for the signed-in user**, so the agent still only
+sees data that user is allowed to see. No shared identity, and no secret in the bundle — MSAL
+acquires the token at runtime.
 
 ### No extra LLM is needed
 
 A published Fabric data agent exposes exactly **one** MCP tool: a natural-language "ask" tool. All
-schema reasoning, query generation, and answer synthesis happen inside Fabric. The function just
-relays the question and returns the text blocks, so there is no Azure OpenAI dependency here.
+schema reasoning, query generation, and answer synthesis happen inside Fabric, so there is no Azure
+OpenAI dependency here.
 
 The tool name and its input argument name are **discovered at runtime** via `tools/list` rather
-than hard-coded, because both are configured per data agent when it is published.
+than hard-coded, because both are configured per data agent when it is published. For `da_IP` they
+resolve to `DataAgent_da_IP` / `userQuestion`.
 
 ### Conversation context
 
-The MCP tool is stateless per call. `askDataAgent` therefore replays the last few turns of the
-conversation inline in the prompt (`composePrompt` in `rayfin/functions/src/dataAgentMcp.ts`).
+The MCP tool is stateless per call, so the last few turns are replayed inline in the prompt
+(`composePrompt` in `src/services/dataAgentMcp.ts`).
 
 ## Project layout
 
 | Path | Purpose |
 | --- | --- |
-| `rayfin/rayfin.yml` | Services enabled for this app: `auth`, `data`, `functions`, `staticHosting`. |
+| `rayfin/rayfin.yml` | Services enabled for this app: `auth`, `data`, `staticHosting`. `functions` is disabled — see above. |
 | `rayfin/data/Conversation.ts` | Chat thread entity, row-level-secured to its owner. |
 | `rayfin/data/Message.ts` | Chat message entity, row-level-secured to its owner. |
-| `rayfin/functions/src/function_app.ts` | The `askDataAgent` server-side function. |
-| `rayfin/functions/src/dataAgentMcp.ts` | MCP client for the data agent. |
-| `rayfin/functions/src/types.ts` | **Auto-generated.** Types the frontend `invoke()` calls. |
-| `src/services/chat.ts` | Chat history CRUD + `askDataAgent` invocation. |
+| `src/services/dataAgentMcp.ts` | Browser MCP client for the data agent. |
+| `src/services/fabricAuth.ts` | MSAL flow that mints the Fabric-scoped Entra token. |
+| `src/services/chat.ts` | Chat history CRUD + `askDataAgent`. |
 | `src/hooks/useChat.ts` | Chat state machine. |
 | `src/pages/ChatPage.tsx` | The chat screen. |
+| `rayfin/functions/` | **Unused.** Kept in case the Functions workload is enabled later. |
 
 ## Configuration
 
-The data agent coordinates default to the values baked into `rayfin/functions/src/function_app.ts`:
+Set these in `.env.local` for local dev, and in the environment used by `npx rayfin up` for
+deploys. Vite inlines `VITE_*` variables at build time.
 
-| Setting | Value |
-| --- | --- |
-| Workspace | `AGIC IP MARKETING - AGENT` (`f67f0cf4-b2c5-410e-b733-3b5c25b83ffd`) |
-| Data agent | `da_IP` (`c4a26507-3d2d-4f2f-9591-c88a013a1f22`) |
+| Variable | Required | Default |
+| --- | --- | --- |
+| `VITE_ENTRA_CLIENT_ID` | **yes** | — |
+| `VITE_ENTRA_TENANT_ID` | no | `organizations` |
+| `VITE_FABRIC_WORKSPACE_ID` | no | `f67f0cf4-b2c5-410e-b733-3b5c25b83ffd` (`AGIC IP MARKETING - AGENT`) |
+| `VITE_FABRIC_DATA_AGENT_ID` | no | `c4a26507-3d2d-4f2f-9591-c88a013a1f22` (`da_IP`) |
 
-To point the app at a different agent without editing code, set them as deployed secrets:
+### Required Entra app registration
 
-```bash
-npx rayfin secret set FABRIC_WORKSPACE_ID
-npx rayfin secret set FABRIC_DATA_AGENT_ID
-```
+`VITE_ENTRA_CLIENT_ID` must point at an Entra **single-page application** registration:
+
+1. Entra admin center → **App registrations** → **New registration**.
+2. Platform **Single-page application**, redirect URI = the deployed app origin
+   (e.g. `https://<app>.webapp.fabricapps.net`). Add `http://localhost:5173` for local dev.
+3. **API permissions** → **Power BI Service** → *Delegated* → grant what the agent needs (for a
+   semantic-model-backed agent: `Dataset.Read.All`, `Workspace.Read.All`), then **Grant admin
+   consent** so users are not prompted individually.
+
+Users must also have access to the data agent's workspace and to the data behind it.
 
 ## Running it
 
@@ -84,15 +121,16 @@ npx rayfin login
 npm run dev
 ```
 
-Local dev signs in against the local backend, so chat history is kept in memory and
-`askDataAgent` returns a clearly-labelled stub. **The real data agent is only reachable from the
-deployed backend** — Fabric SSO and the on-behalf-of Fabric token both require the Fabric portal.
+Local dev signs in against the local backend, so chat history is kept in memory. The data agent
+itself **is** reachable locally once `VITE_ENTRA_CLIENT_ID` is set in `.env.local` and
+`http://localhost:5173` is registered as a redirect URI; without it, `askDataAgent` returns a
+clearly-labelled stub.
 
 ### Deploy to Fabric
 
 ```bash
 npx rayfin login
-npx rayfin up          # builds the frontend, deploys the function, applies schema changes
+npx rayfin up          # builds the frontend and applies schema changes
 npx rayfin up status
 ```
 
@@ -110,11 +148,8 @@ Then open the app item from the Fabric portal.
 The app and the data agent intentionally live in different workspaces/regions — the MCP call is a
 plain cross-workspace REST call, so only the *deploy* workspace is region-constrained.
 
-After changing anything under `rayfin/functions/src/`, regenerate the frontend-facing types:
-
-```bash
-npx rayfin dev functions apply   # runs typegen and watches for changes
-```
+Remember that `VITE_*` variables are **inlined at build time**, so changing one requires a
+redeploy, not just a restart.
 
 ## Prerequisites in Fabric
 
@@ -135,14 +170,19 @@ npx rayfin dev functions apply   # runs typegen and watches for changes
   *Capacities can be designated as Fabric Copilot capacities*, and cross-geo processing/storing
   for AI. Changes can take up to an hour to propagate.
 - Each end user needs read access to the workspace **and** to the data sources behind the agent.
-  On-behalf-of tokens cannot grant more than the user already has.
+  Delegated tokens cannot grant more than the user already has.
+- An Entra **SPA app registration** with admin-consented delegated Power BI permissions — see
+  [Required Entra app registration](#required-entra-app-registration).
 
 ## Known constraints
 
-- **Long questions may time out.** Data agent answers can take 30–120s while the public function
-  invocation path has its own timeout. If slow questions fail, the MCP `tasks` extension
-  (`tasks/get` polling) is the documented escape hatch and would need to be added to
-  `dataAgentMcp.ts`.
+- **Long questions may time out.** A simple question measured ~22s end to end; complex ones can
+  take substantially longer. The browser client allows 240s before aborting. If that proves
+  insufficient, the MCP `tasks` extension (the agent advertises `tasks.requests.tools.call`) is the
+  documented escape hatch and would need to be added to `src/services/dataAgentMcp.ts`.
+- **Rayfin Functions are unavailable on this tenant/capacity** (`WorkloadException` /
+  `FeatureNotSupported`). The unused source under `rayfin/functions/` is retained so the
+  server-side design can be restored if the workload is ever enabled.
 - **Chat history lives in Fabric-managed MSSQL, not SQLite.** A local SQLite file cannot survive
   in the Fabric-hosted backend, and the Rayfin data service already provides per-user row-level
   security for free.
@@ -153,8 +193,8 @@ npx rayfin dev functions apply   # runs typegen and watches for changes
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Local dev stack (frontend + local functions host). |
+| `npm run dev` | Local dev stack (frontend + local backend). |
 | `npm run build` | Type-check and build the frontend. |
 | `npm test` | Vitest unit tests. |
 | `npm run lint` | ESLint. |
-| `npx rayfin up` | Deploy app, functions, and schema to Fabric. |
+| `npx rayfin up` | Deploy app and schema to Fabric. |

@@ -20,6 +20,7 @@
     "rayfin:db": "rayfin up db apply"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.23.0",
     "@microsoft/rayfin-auth-provider-fabric": "^1.35.1",
     "@microsoft/rayfin-client": "^1.35.1",
     "@microsoft/rayfin-core": "^1.35.1",
