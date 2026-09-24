@@ -98,6 +98,18 @@ npx rayfin up status
 
 Then open the app item from the Fabric portal.
 
+**Current deployment** (branch `feature/fabric-data-agent-chat`):
+
+| | |
+| --- | --- |
+| Deploy workspace | `ws-marketing-data-chat` (`09745c10-8d0c-4b14-aafe-dd453bd1c982`), **Italy North** |
+| App URL | https://early-wave-d05589855e-italynorth.webapp.fabricapps.net |
+| AppBackend item | `363190a7-53f1-40fa-9946-3e8cd1acefe5` |
+| Data agent workspace | `fabric-ip-agic-prod-engine-crm` (`c3c64719-…`), North Europe |
+
+The app and the data agent intentionally live in different workspaces/regions — the MCP call is a
+plain cross-workspace REST call, so only the *deploy* workspace is region-constrained.
+
 After changing anything under `rayfin/functions/src/`, regenerate the frontend-facing types:
 
 ```bash
@@ -108,6 +120,17 @@ npx rayfin dev functions apply   # runs typegen and watches for changes
 
 - The data agent must be **published** — the MCP endpoint 404s/errors for a draft agent.
 - Paid F2+ capacity (or Power BI Premium P1+ with Fabric enabled).
+- **The deploy workspace must sit on a capacity in a region where Fabric Apps (preview) is
+  available.** This is the single easiest thing to get wrong: in an unsupported region every
+  `rayfin up` fails with `403 FeatureNotAvailable` at *Resolving Rayfin item*, which looks exactly
+  like a missing tenant setting but is not. At the time of writing **North Europe is _not_
+  supported**, while **Italy North, West Europe, France Central, Norway East, Sweden Central and
+  Switzerland North are**. See
+  [region availability](https://learn.microsoft.com/fabric/admin/region-availability).
+  Quick check: `POST /v1/workspaces/{id}/items` with `{"type":"AppBackend"}` — `403
+  FeatureNotAvailable` means region, `403` on other item types means permissions.
+- Tenant setting **Fabric Apps (preview)** enabled in the admin portal, for your org or for a
+  security group containing the deploying user.
 - Tenant settings enabled: *Users can use Copilot and other features powered by Azure OpenAI*,
   *Capacities can be designated as Fabric Copilot capacities*, and cross-geo processing/storing
   for AI. Changes can take up to an hour to propagate.
