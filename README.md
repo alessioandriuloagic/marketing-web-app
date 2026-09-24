@@ -95,8 +95,12 @@ deploys. Vite inlines `VITE_*` variables at build time.
 | --- | --- | --- |
 | `VITE_ENTRA_CLIENT_ID` | **yes** | — |
 | `VITE_ENTRA_TENANT_ID` | no | `organizations` |
-| `VITE_FABRIC_WORKSPACE_ID` | no | `f67f0cf4-b2c5-410e-b733-3b5c25b83ffd` (`AGIC IP MARKETING - AGENT`) |
-| `VITE_FABRIC_DATA_AGENT_ID` | no | `c4a26507-3d2d-4f2f-9591-c88a013a1f22` (`da_IP`) |
+| `VITE_DATA_AGENT_WORKSPACE_ID` | no | `f67f0cf4-b2c5-410e-b733-3b5c25b83ffd` (`AGIC IP MARKETING - AGENT`) |
+| `VITE_DATA_AGENT_ID` | no | `c4a26507-3d2d-4f2f-9591-c88a013a1f22` (`da_IP`) |
+
+> **Do not rename these to `VITE_FABRIC_*`.** `rayfin up` regenerates `.env.local` with its
+> own `VITE_FABRIC_WORKSPACE_ID`, pointing at the app's own workspace, and `.env.local`
+> outranks `.env` in Vite — the MCP call would silently target the wrong workspace.
 
 ### Required Entra app registration
 
