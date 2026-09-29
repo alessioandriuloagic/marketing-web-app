@@ -16,7 +16,7 @@ import {
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
-  return 'Something went wrong while contacting the data agent.';
+  return 'Si è verificato un errore durante la comunicazione con il Data Agent.';
 }
 
 export interface UseChat {

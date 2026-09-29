@@ -48,7 +48,7 @@ const MAX_CONTENT = 4000;
 /** Prior turns sent to the stateless data agent as conversation context. */
 const CONTEXT_TURNS = 6;
 
-export const NEW_CHAT_TITLE = 'New chat';
+export const NEW_CHAT_TITLE = 'Nuova chat';
 
 function truncate(value: string, max = MAX_CONTENT): string {
   return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
@@ -72,7 +72,7 @@ let localMessages: ChatMessage[] = [];
 function requireUserId(): string {
   const session = getRayfinClient().auth.getSession();
   if (!session.isAuthenticated || !session.user) {
-    throw new Error('You are signed out. Sign in again to continue.');
+    throw new Error('Sessione scaduta. Accedi di nuovo per continuare.');
   }
   return session.user.id;
 }
@@ -255,9 +255,9 @@ export async function askDataAgent(
     await new Promise((resolve) => setTimeout(resolve, 600));
     return {
       answer:
-        `**Local development mode.** Entra sign-in is not configured, so this is a stub ` +
-        `reply to:\n\n> ${question}\n\n` +
-        'Set `VITE_ENTRA_CLIENT_ID` in `.env.local` to query your real data.',
+        `**Modalità sviluppo locale.** L'accesso Entra non è configurato: questa è una ` +
+        `risposta di prova a:\n\n> ${question}\n\n` +
+        'Imposta `VITE_ENTRA_CLIENT_ID` in `.env.local` per interrogare i dati reali.',
       toolName: 'local-stub',
     };
   }

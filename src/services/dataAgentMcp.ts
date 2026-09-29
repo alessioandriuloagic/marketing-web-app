@@ -141,7 +141,7 @@ async function resolveTool(url: string, fabricToken: string): Promise<McpTool> {
   const tool = result.tools?.[0];
   if (!tool) {
     throw new Error(
-      'The data agent MCP server exposed no tools. Confirm the data agent is published.'
+      'Il server MCP del Data Agent non espone alcuno strumento. Verifica che il Data Agent sia pubblicato.'
     );
   }
   toolCache.set(url, tool);
@@ -170,12 +170,12 @@ export async function askDataAgentOverMcp(
 
   if (result.isError) {
     throw new Error(
-      extractText(result.content) || 'The data agent returned an error.'
+      extractText(result.content) || 'Il Data Agent ha restituito un errore.'
     );
   }
 
   return {
-    answer: extractText(result.content) || 'The data agent returned an empty answer.',
+    answer: extractText(result.content) || 'Il Data Agent ha restituito una risposta vuota.',
     toolName: tool.name,
   };
 }

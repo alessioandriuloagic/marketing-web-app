@@ -62,21 +62,21 @@ function describeAuthError(error: unknown): string {
     error instanceof Error ? `${error.message}` : typeof error === 'string' ? error : '';
 
   if (raw.includes('AADSTS700016') || raw.includes('unauthorized_client')) {
-    return `The Entra application ${clientId} does not exist in tenant ${tenantId}, or it is not enabled for this sign-in. Check VITE_ENTRA_CLIENT_ID.`;
+    return `L'applicazione Entra ${clientId} non esiste nel tenant ${tenantId} o non è abilitata per questo accesso. Verifica VITE_ENTRA_CLIENT_ID.`;
   }
   if (raw.includes('AADSTS50011') || raw.includes('redirect_uri')) {
-    return `The redirect URI ${window.location.origin} is not registered on the Entra application ${clientId}. Add it as a Single-page application redirect URI.`;
+    return `Il redirect URI ${window.location.origin} non è registrato nell'applicazione Entra ${clientId}. Aggiungilo come redirect URI di tipo Single-page application.`;
   }
   if (raw.includes('AADSTS65001') || raw.includes('consent_required')) {
-    return 'Consent is required for the Fabric data agent permissions. Accept the prompt, or ask an administrator to grant consent.';
+    return 'È necessario il consenso ai permessi del Data Agent di Fabric. Accetta la richiesta o chiedi a un amministratore di concederlo.';
   }
   if (raw.includes('block_nested_popups')) {
-    return 'Entra authentication opened in an unexpected popup. Close the popup and retry from the app.';
+    return "L'autenticazione Entra si è aperta in un popup inatteso. Chiudi il popup e riprova dall'app.";
   }
   if (raw.includes('popup_window_error') || raw.includes('popup_blocked')) {
-    return 'The sign-in popup was blocked by the browser. Allow popups for this site and retry.';
+    return 'Il browser ha bloccato il popup di accesso. Consenti i popup per questo sito e riprova.';
   }
-  return raw || 'Entra sign-in failed.';
+  return raw || 'Accesso Entra non riuscito.';
 }
 
 function pickAccount(

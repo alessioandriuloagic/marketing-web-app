@@ -12,6 +12,7 @@ services:
       - http://localhost:5173
       - http://127.0.0.1:5173
       - https://upper-field-2fd6b232fd-italynorth.webapp.fabricapps.net
+      - https://dry-iris-932fb2e045-italynorth.webapp.fabricapps.net
   data:
     enabled: true
     dialect: mssql

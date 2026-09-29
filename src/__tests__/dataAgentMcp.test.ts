@@ -155,6 +155,6 @@ describe('askDataAgentOverMcp', () => {
 
     await expect(
       askDataAgentOverMcp(coords('e'), 'token', 'How many?')
-    ).rejects.toThrow('exposed no tools');
+    ).rejects.toThrow('non espone alcuno strumento');
   });
 });

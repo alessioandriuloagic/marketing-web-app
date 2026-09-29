@@ -183,6 +183,11 @@ Then open the app item from the Fabric portal.
 | App URL | https://upper-field-2fd6b232fd-italynorth.webapp.fabricapps.net |
 | AppBackend item | `a1003d44-9f1f-45be-a0d4-93cd85a6ff56` |
 | Data agent workspace | `AGIC IP MARKETING - AGENT` (`f67f0cf4-…`), North Europe |
+| Dev workspace | `7b3a6af1-9172-486c-9e0c-7e2f4cf2e314`, item `1204f7d0-3011-42ee-9623-af39017d4d15` |
+| Dev app URL | https://dry-iris-932fb2e045-italynorth.webapp.fabricapps.net |
+
+`rayfin up --workspace-id <id>` makes that deployment the active one; use `rayfin up switch` to
+go back before redeploying to the other workspace.
 
 The app and the data agent intentionally live in different workspaces/regions — the MCP call is a
 plain cross-workspace REST call, so only the *deploy* workspace is region-constrained.
