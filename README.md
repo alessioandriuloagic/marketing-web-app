@@ -102,6 +102,11 @@ The agent does not have to live on the same capacity — or even the same region
 The MCP endpoint is a global `api.fabric.microsoft.com` API; only *hosting* a Fabric App item
 is region-gated.
 
+MSAL's popup and silent flows return to the registered app origin. `src/entry.ts` detects an
+Entra authorization response and runs MSAL's redirect bridge instead of mounting the app in
+the callback window; ordinary navigation still mounts `src/main.tsx`. This avoids nested
+popup attempts and uses the existing SPA redirect URI.
+
 > **Do not rename these to `VITE_FABRIC_*`.** `rayfin up` regenerates `.env.local` with its
 > own `VITE_FABRIC_WORKSPACE_ID`, pointing at the app's own workspace, and `.env.local`
 > outranks `.env` in Vite — the MCP call would silently target the wrong workspace.
@@ -170,13 +175,13 @@ npx rayfin up status
 
 Then open the app item from the Fabric portal.
 
-**Current deployment** (branch `feature/fabric-data-agent-chat`):
+**Current deployment**:
 
 | | |
 | --- | --- |
 | Deploy workspace | `ws-marketing-data-chat` (`09745c10-8d0c-4b14-aafe-dd453bd1c982`), **Italy North** |
-| App URL | https://early-wave-d05589855e-italynorth.webapp.fabricapps.net |
-| AppBackend item | `363190a7-53f1-40fa-9946-3e8cd1acefe5` |
+| App URL | https://upper-field-2fd6b232fd-italynorth.webapp.fabricapps.net |
+| AppBackend item | `a1003d44-9f1f-45be-a0d4-93cd85a6ff56` |
 | Data agent workspace | `AGIC IP MARKETING - AGENT` (`f67f0cf4-…`), North Europe |
 
 The app and the data agent intentionally live in different workspaces/regions — the MCP call is a

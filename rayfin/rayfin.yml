@@ -11,7 +11,7 @@ services:
     allowedRedirectUris:
       - http://localhost:5173
       - http://127.0.0.1:5173
-      - https://early-wave-d05589855e-italynorth.webapp.fabricapps.net
+      - https://upper-field-2fd6b232fd-italynorth.webapp.fabricapps.net
   data:
     enabled: true
     dialect: mssql

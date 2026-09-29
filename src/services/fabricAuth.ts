@@ -70,6 +70,9 @@ function describeAuthError(error: unknown): string {
   if (raw.includes('AADSTS65001') || raw.includes('consent_required')) {
     return 'Consent is required for the Fabric data agent permissions. Accept the prompt, or ask an administrator to grant consent.';
   }
+  if (raw.includes('block_nested_popups')) {
+    return 'Entra authentication opened in an unexpected popup. Close the popup and retry from the app.';
+  }
   if (raw.includes('popup_window_error') || raw.includes('popup_blocked')) {
     return 'The sign-in popup was blocked by the browser. Allow popups for this site and retry.';
   }
