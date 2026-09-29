@@ -45,6 +45,9 @@ export function useChat(): UseChat {
 
   // Guards against a slow message fetch overwriting a newer conversation's messages.
   const requestedIdRef = useRef<string | null>(null);
+  // Conversation just created by `send`: its messages already live in local state, so
+  // fetching them would race with the in-flight send and wipe the optimistic messages.
+  const locallyCreatedIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,6 +73,10 @@ export function useChat(): UseChat {
       return;
     }
     requestedIdRef.current = activeId;
+    if (locallyCreatedIdRef.current === activeId) {
+      locallyCreatedIdRef.current = null;
+      return;
+    }
     setLoadingMessages(true);
     listMessages(activeId)
       .then((items) => {
@@ -134,8 +141,9 @@ export function useChat(): UseChat {
           const conversation = await createConversation(deriveTitle(question));
           conversationId = conversation.id;
           setConversations((prev) => [conversation, ...prev]);
-          setActiveId(conversation.id);
+          locallyCreatedIdRef.current = conversation.id;
           requestedIdRef.current = conversation.id;
+          setActiveId(conversation.id);
         }
 
         const userMessage = await appendMessage({
